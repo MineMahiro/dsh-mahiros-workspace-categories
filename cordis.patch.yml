@@ -1,0 +1,18 @@
+# dsh-mahiros-workspace-categories bundle patch
+#
+# This is the `dsh.bundle.patch` layer: adding this package to
+# `dsh.profile.bundles` makes the profile boot merge this patch, which mounts
+# the loader row for the plugin (host half + `dsh.client` scan).
+#
+# The row id is fork-specific (`mahiro-workspace-tree`) so it never collides
+# with the upstream `dsh-workspace-categories` bundle, whose patch inserts
+# `workspace-tree`.
+#
+# The `disabled` guard backs this row off when the upstream plugin — or another
+# enabled row of this plugin — is already mounted. Both bundles register the
+# `sidebar.workspaces` single slot at `priority: -100`, so two live entries at
+# the same priority would make the slot registration ambiguous.
+- insert:
+    - id: mahiro-workspace-tree
+      name: 'dsh-mahiros-workspace-categories'
+      disabled: !!js "[...ctx.loader.entries()].some((e) => (e.options.name === 'dsh-mahiros-workspace-categories' || e.options.name === 'dsh-workspace-categories') && e.options.id !== 'mahiro-workspace-tree' && !e.disabled)"

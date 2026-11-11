@@ -1,0 +1,56 @@
+# NOTICE
+
+**dsh-mahiros-workspace-categories**
+
+- Copyright (c) 2026 MineMahiro — fork maintainer, all changes since the fork
+- Copyright (c) 2026 knight — original project `dsh-workspace-categories`
+
+This project is a modified fork of **dsh-workspace-categories** by knight, used
+and distributed under the MIT license. The original copyright notice is kept in
+[`LICENSE`](./LICENSE).
+
+## Upstream
+
+| | |
+| --- | --- |
+| Repository | <https://github.com/Knight-Zjy/dsh-workspace-categories> |
+| Package | <https://www.npmjs.com/package/dsh-workspace-categories> |
+| License | MIT |
+| Base | upstream 0.2.x, plugin structure (`dsh.bundle.patch` + `dsh.client` halves, `sidebar.workspaces` slot contract) unchanged |
+
+The fork keeps the upstream slot contract and localStorage keys
+(`dsh.workspace-tree.state.v1` / `.v2`), and adds its own Host route
+(`/api/workspace-categories.state`), so a machine that previously ran the
+upstream plugin keeps its categories and workspace assignments after switching.
+
+## What this fork changes
+
+Structural additions relative to upstream:
+
+1. **Cross-device shared state.** Categories, workspace → category assignments
+   and per-workspace manual session order live in a Host-owned document
+   (`$DSH_HOME/workspace-categories/state.json`) served over Connection's
+   authenticated `/api` channel (`GET|POST /api/workspace-categories.state`).
+   The desktop browser and a `dsh-pocket` phone therefore render the same tree;
+   `localStorage` is only a mirror plus an operation outbox.
+2. **Host half.** `lib/index.js`, `lib/state-store.js` and
+   `lib/state-routes.js` are new files (upstream is client-only).
+
+Behavior changes carried by the fork (see `CHANGELOG.md` for the full list):
+
+- work-status dots aggregated upward into folded workspace/category rows;
+- empty Sessions (no messages and no composer draft) hidden from the tree;
+- inline Session rename through the Host `session/rename` Remote;
+- drag sorting for categories, workspaces and sessions;
+- new-workspace flow consumes the optional `workspaceDefaultDirectory` client
+  service (official in-app directory dialog) and falls back to the official
+  native chooser when that companion plugin is absent;
+- after creating a workspace, a first Session is created and opened; running
+  flows disable their triggers instead of spinning them;
+- no native-browser toggles: the tree is the only workspace browser.
+
+## License
+
+MIT. See [`LICENSE`](./LICENSE). The upstream MIT notice is retained verbatim;
+the fork's own modifications are additionally licensed under the same MIT
+terms.

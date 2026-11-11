@@ -1,0 +1,6 @@
+{
+	"meta": {
+		"title": "Workspace Tree",
+		"description": "Category tree for the DSH sidebar workspace browser: workspaces and their sessions nest under user-made categories, and categories, assignments and session order live in a Host-side shared document so the desktop browser and a dsh-pocket phone see the same tree. Session rows show work status (running / waiting / completed) aggregated upward into folded rows; blank sessions are hidden automatically; categories, workspaces and sessions can be reordered by dragging and renamed in place (removing a workspace only drops its row, the folder and session logs are kept)."
+	}
+}

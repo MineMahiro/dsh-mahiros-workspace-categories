@@ -1,0 +1,90 @@
+{
+  "name": "dsh-mahiros-workspace-categories",
+  "version": "0.8.0",
+  "description": "分类树形式的工作区管理器（分类 > 工作区 > 会话），接管 DeepSeek Harness 左侧栏的工作区浏览器；分类与归类由 Host 共享，桌面浏览器与 dsh-pocket 手机端看到同一棵树。Category tree for the DSH sidebar workspace browser.",
+  "type": "module",
+  "main": "lib/index.js",
+  "license": "MIT",
+  "author": "knight <knight-z@foxmail.com>",
+  "contributors": [
+    {
+      "name": "MineMahiro",
+      "url": "https://github.com/MineMahiro"
+    }
+  ],
+  "icon": "./icon.svg",
+  "homepage": "https://github.com/MineMahiro/dsh-mahiros-workspace-categories",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MineMahiro/dsh-mahiros-workspace-categories.git"
+  },
+  "bugs": {
+    "url": "https://github.com/MineMahiro/dsh-mahiros-workspace-categories/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "deepseek",
+    "deepseek-harness",
+    "harness",
+    "dsh",
+    "dsh-plugin",
+    "workspace",
+    "sidebar",
+    "tree",
+    "categories",
+    "分类",
+    "工作区"
+  ],
+  "engines": {
+    "dsh": ">=0.2.0-rc.2 <0.2.3-0",
+    "node": ">=20"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.4",
+    "@deepseek-ai/dsh-client-ui-primitives": ">=0.2.0-rc.2 <0.3.0-0",
+    "@deepseek-ai/dsh-client-ui-sidebar": ">=0.2.0-rc.2 <0.3.0-0",
+    "@deepseek-ai/dsh-client-ui-workspace": ">=0.2.0-rc.2 <0.3.0-0"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/dsh-client-ui-primitives": {
+      "optional": true
+    }
+  },
+  "exports": {
+    ".": {
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "default": "./lib/client.js"
+    },
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json"
+  },
+  "files": [
+    "lib",
+    "locale",
+    "cordis.patch.yml",
+    "icon.svg",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "dsh": {
+    "manifestVersion": 1,
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-sidebar",
+        "@deepseek-ai/dsh-client-ui-workspace"
+      ]
+    }
+  },
+  "scripts": {
+    "test": "node --test \"test/*.test.js\""
+  }
+}
