@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+### Documentation
+
+- **README rewritten for users**: `README.md` now follows the repo's
+  `github-readme` skill structure (status, quick start with the release asset,
+  other install routes, notes, features, dragging, shared state, known
+  limitations, FAQ, compatibility, repository layout, roadmap, disclaimer,
+  license).
+- **English mirror**: `README.en.md` mirrors the Chinese README heading for
+  heading and is shipped in the package; `test/package.test.js` now pins the
+  mirror structure, the table-of-contents anchors and the release-asset version
+  in both READMEs.
+
 ## 0.8.3 — 2026-11-12
 
 ### Fixed

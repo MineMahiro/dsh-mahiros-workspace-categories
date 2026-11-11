@@ -12,7 +12,9 @@
  *     the upstream package name (no duplicate `sidebar.workspaces` entry when
  *     both plugins happen to be installed);
  *   - the MIT license keeps the upstream copyright and NOTICE names the base
- *     project (attribution).
+ *     project (attribution);
+ *   - the two READMEs stay short, structural mirrors of each other, and their
+ *     install command keeps pointing at this version's release asset.
  */
 
 import assert from 'node:assert/strict'
@@ -31,7 +33,9 @@ const patch = await read('cordis.patch.yml')
 const client = await read('lib/client.js')
 const license = await read('LICENSE')
 const notice = await read('NOTICE')
-const readme = await read('README.md')
+
+/** Both human-facing READMEs; the English one mirrors the Chinese structure. */
+const READMES = ['README.md', 'README.en.md']
 
 const PUBLISHED_FILES = [
 	'package.json',
@@ -53,6 +57,18 @@ const MACHINE_SPECIFIC = [
 	['loopback address', /127\.0\.0\.1|localhost:\d+/],
 	['development port', /:30[0-9]{2}\b/]
 ]
+
+/** Headings of one level and the TOC anchors they must resolve to. */
+const headings = (text, level) =>
+	[...text.matchAll(new RegExp(`^#{${level}} (.+)$`, 'gm'))].map((match) => match[1])
+const tocAnchors = (text) => [...text.matchAll(/^- \[.+?\]\(#(.+?)\)$/gm)].map((match) => match[1])
+const slug = (heading) =>
+	heading
+		.trim()
+		.toLowerCase()
+		.replace(/`/g, '')
+		.replace(/[^\p{L}\p{N}\- ]/gu, '')
+		.replace(/ /g, '-')
 
 test('the package name, bundle id, Host entry and patch row agree', async () => {
 	assert.equal(pkg.name, 'dsh-mahiros-workspace-categories')
@@ -100,7 +116,7 @@ test('the published file set exists and needs no build step', async () => {
 })
 
 test('no published file leaks a machine-specific path or address', async () => {
-	for (const relative of [...PUBLISHED_FILES, 'README.md', 'AGENTS.md', 'NOTICE', 'LICENSE']) {
+	for (const relative of [...PUBLISHED_FILES, ...READMES, 'AGENTS.md', 'NOTICE', 'LICENSE']) {
 		const content = await read(relative)
 		for (const [label, pattern] of MACHINE_SPECIFIC) {
 			assert.doesNotMatch(content, pattern, `${relative} contains a ${label}`)
@@ -130,13 +146,55 @@ test('the license keeps the upstream MIT notice and NOTICE names the fork base',
 	assert.match(notice, /MIT/i)
 })
 
-test('the README stays human-facing and ships the install and compatibility notes', () => {
-	assert.match(readme, /^# dsh-mahiros-workspace-categories/m)
-	assert.match(readme, /## 安装/)
-	assert.match(readme, /## 兼容性/)
-	assert.match(readme, /## 许可/)
-	assert.match(readme, /0\.2\.0-rc\.2/, 'stated minimum DSH version')
-	assert.ok(readme.split('\n').length <= 220, 'README stays short')
+const README_SECTIONS = {
+	'README.md': { quickStart: /^## 快速开始$/m, compatibility: /^## 兼容性$/m, license: /^## 许可声明$/m },
+	'README.en.md': { quickStart: /^## Quick start$/m, compatibility: /^## Compatibility$/m, license: /^## License$/m }
+}
+
+test('the READMEs stay human-facing and ship the install and compatibility notes', async () => {
+	for (const relative of READMES) {
+		const text = await read(relative)
+		assert.match(text, /^# dsh-mahiros-workspace-categories$/m, `${relative} starts with the repo name`)
+		assert.match(text, README_SECTIONS[relative].quickStart, `${relative} opens with a quick start`)
+		assert.match(text, README_SECTIONS[relative].compatibility, `${relative} states compatibility`)
+		assert.match(text, README_SECTIONS[relative].license, `${relative} states the license`)
+		assert.match(text, /0\.2\.0-rc\.2/, `${relative} states the minimum DSH version`)
+		assert.match(text, /dsh plugin --profile/, `${relative} shows the install command`)
+		assert.match(text, /docs\/COMPATIBILITY\.md/, `${relative} links the compatibility notes`)
+		assert.ok(text.split('\n').length <= 220, `${relative} stays short`)
+	}
+})
+
+test('the README install command points at this version’s release asset', async () => {
+	const asset = `${pkg.name}-${pkg.version}.tgz`
+	for (const relative of READMES) {
+		const text = await read(relative)
+		assert.ok(text.includes(`/releases/download/v${pkg.version}/`), `${relative} links the v${pkg.version} release`)
+		assert.ok(text.includes(asset), `${relative} names ${asset}`)
+	}
+})
+
+test('the English README mirrors the Chinese one', async () => {
+	const zh = await read('README.md')
+	const en = await read('README.en.md')
+	for (const level of [2, 3]) {
+		assert.equal(
+			headings(en, level).length,
+			headings(zh, level).length,
+			`the English README keeps the same number of H${level} headings`
+		)
+	}
+	assert.match(zh, /\[English\]\(\.\/README\.en\.md\)/, 'the Chinese README links its English mirror')
+	assert.match(en, /\[中文\]\(\.\/README\.md\)/, 'the English README links the Chinese original')
+	for (const [relative, text] of [
+		['README.md', zh],
+		['README.en.md', en]
+	]) {
+		const anchors = tocAnchors(text)
+		assert.ok(anchors.length >= 8, `${relative} ships a table of contents`)
+		const known = new Set(headings(text, 2).map(slug))
+		for (const anchor of anchors) assert.ok(known.has(anchor), `${relative} TOC anchor #${anchor} has a heading`)
+	}
 })
 
 test('the locale catalogues stay small, valid and non-empty', async () => {

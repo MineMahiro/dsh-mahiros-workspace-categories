@@ -25,6 +25,8 @@
 | `test/*.test.js` | 无依赖单测（`node --test`），含发布守卫与拖拽行为 |
 | `test-harness/bundle.js` | 客户端单测共用的 VM + React 替身加载器（不在 `test/` 下，避免被 `node --test` 当作用例文件） |
 | `icon.svg` | 插件图标 |
+| `README.md` / `README.en.md` | 人类文档：中文主档 + 英文镜像，标题层级与顺序一一对应；**改一侧必须同步另一侧** |
+| `docs/COMPATIBILITY.md` | 兼容性核对证据、接口清单与降级行为 |
 
 ## 不可破坏的约定（测试会钉住）
 
@@ -106,7 +108,8 @@ npm pack --dry-run        # 发布内容必须含 lib/ locale/ cordis.patch.yml 
 
 ## 发布清单
 
-1. 改 `package.json` 的 `version`；在 `CHANGELOG.md` 顶部加条目；README 尽量写不依赖版本号的安装方式。
+1. 改 `package.json` 的 `version`；在 `CHANGELOG.md` 顶部加条目；同步更新 `README.md` 与
+   `README.en.md` 里 Release 附件 URL 的版本号（发布守卫会核对附件名与 `version` 一致）。
 2. `npm test` 全绿。
 3. `npm pack --pack-destination dist/`，产出 `dsh-mahiros-workspace-categories-<version>.tgz`。
 4. `git tag v<version> && git push origin main --tags`。
@@ -115,4 +118,7 @@ npm pack --dry-run        # 发布内容必须含 lib/ locale/ cordis.patch.yml 
 ## 风格
 
 - 用户可见文案用中文；代码注释用英文，沿用现有「长 why 注释」风格。
+- 人类文档按 `github-readme` skill 的「其他类型」结构撰写：状态、简介、快速开始、
+  其他方案、注意事项、详细介绍、FAQ、兼容性、仓库结构、路线图、免责声明、许可声明；
+  两侧 README 标题数量与顺序必须一致，发布守卫会检查目录锚点与附件版本号。
 - 不改与任务无关的 CSS/交互；不引入旋转动画（本 fork 刻意移除了 `twt-busy`，状态点转圈除外）。
