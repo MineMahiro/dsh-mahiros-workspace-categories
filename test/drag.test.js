@@ -174,11 +174,21 @@ function createRenderer() {
 function dragWindow() {
 	const listeners = new Map()
 	const frames = []
+	const timers = []
 	let nextId = 1
+	let nextTimerId = 1
 	const window = {
 		location: { protocol: 'http:', href: 'http://harness.invalid/' },
-		setTimeout: () => 0,
-		clearTimeout: () => {},
+		setTimeout: (callback) => {
+			const id = nextTimerId
+			nextTimerId += 1
+			timers.push({ id, callback })
+			return id
+		},
+		clearTimeout: (id) => {
+			const at = timers.findIndex((entry) => entry.id === id)
+			if (at !== -1) timers.splice(at, 1)
+		},
 		setInterval: () => 0,
 		clearInterval: () => {},
 		requestAnimationFrame(callback) {
@@ -204,6 +214,11 @@ function dragWindow() {
 		window,
 		listeners,
 		frames,
+		timers,
+		/** Run every pending `setTimeout(0)` callback (one task boundary). */
+		runTimers() {
+			for (const timer of timers.splice(0)) timer.callback()
+		},
 		dispatch(type, event) {
 			for (const handler of Array.from(listeners.get(type) ?? [])) handler(event)
 		},
@@ -417,6 +432,34 @@ test('edge autoscroll only moves while the pointer is in a band it can scroll', 
  * Category drags fold workspaces
  * ------------------------------------------------------------------ */
 
+test('dragstart itself changes nothing; the fold and the bar are armed for the next task', () => {
+	const tree = mountTree()
+	workspaceRow(tree, 'ws1').props.onWorkspaceDragStart(dragEvent())
+	// Chrome cancels a native drag whose dragstart handler mutates the DOM
+	// (dragend follows within a few pixels and no drop ever fires), so the tree
+	// must still be untouched at this point.
+	assert.equal(dragBar(tree), undefined)
+	assert.equal(tree.count('SessionRow'), 4)
+	tree.drag.runTimers()
+	assert.ok(dragBar(tree) !== undefined)
+	assert.equal(tree.count('SessionRow'), 0)
+	workspaceRow(tree, 'ws1').props.onWorkspaceDragEnd()
+	assert.equal(tree.count('SessionRow'), 4)
+	assert.equal(tree.drag.timers.length, 0)
+})
+
+test('a drag that ends before the arming task leaves the tree untouched', () => {
+	const tree = mountTree()
+	categoryRow(tree, 'cat_a').props.onDragStart(dragEvent())
+	// The user lets go immediately: endDrag bumps the token and cancels the timer,
+	// so a later stale arming must not fold the tree after the drag is over.
+	categoryRow(tree, 'cat_a').props.onDragEnd()
+	tree.drag.runTimers()
+	assert.equal(dragBar(tree), undefined)
+	assert.equal(tree.count('WorkspaceRow'), 3)
+	assert.deepEqual(plain(tree.model.getViewState().expanded), { ws1: true, ws2: true, ws3: true })
+})
+
 test('dragging a category folds every workspace away, and dragend restores them', () => {
 	const tree = mountTree()
 	assert.equal(tree.count('WorkspaceRow'), 3)
@@ -424,6 +467,7 @@ test('dragging a category folds every workspace away, and dragend restores them'
 	const before = JSON.stringify(tree.storage.entries())
 
 	categoryRow(tree, 'cat_a').props.onDragStart(dragEvent())
+	tree.drag.runTimers()
 	// Only the two category headers remain.
 	assert.equal(tree.count('CategoryRow'), 2)
 	assert.equal(tree.count('WorkspaceRow'), 0)
@@ -448,6 +492,7 @@ test('dragging a workspace folds every session away, and dragend restores them',
 	assert.equal(tree.count('SessionRow'), 4)
 
 	workspaceRow(tree, 'ws1').props.onWorkspaceDragStart(dragEvent())
+	tree.drag.runTimers()
 	assert.equal(tree.count('CategoryRow'), 2)
 	assert.equal(tree.count('WorkspaceRow'), 3)
 	assert.equal(tree.count('SessionRow'), 0)
@@ -468,6 +513,7 @@ test('dragging a session leaves the tree as it is', () => {
 	assert.ok(session !== undefined)
 
 	session.props.onDragStart(dragEvent())
+	tree.drag.runTimers()
 	assert.equal(tree.count('CategoryRow'), 2)
 	assert.equal(tree.count('WorkspaceRow'), 3)
 	assert.equal(tree.count('SessionRow'), 4)
@@ -496,6 +542,7 @@ test('the drag bar appears only while dragging, and its cancel zone keeps the or
 	assert.equal(dragBar(tree), undefined, 'no bar at rest')
 
 	workspaceRow(tree, 'ws1').props.onWorkspaceDragStart(dragEvent())
+	tree.drag.runTimers()
 	assert.ok(dragBar(tree) !== undefined, 'missing the drag bar')
 	const zones = dropZones(tree)
 	assert.equal(zones.length, 2)
@@ -524,6 +571,7 @@ test('dropping a workspace on the delete zone runs the existing workspace delete
 		}
 	})
 	workspaceRow(tree, 'ws1').props.onWorkspaceDragStart(dragEvent())
+	tree.drag.runTimers()
 	const remove = dropZones(tree)[1]
 	remove.props.onDragOver(dragEvent())
 	remove.props.onDrop(dragEvent())
@@ -538,6 +586,7 @@ test('dropping a workspace on the delete zone runs the existing workspace delete
 test('dropping a category on the delete zone deletes it', () => {
 	const tree = mountTree()
 	categoryRow(tree, 'cat_a').props.onDragStart(dragEvent())
+	tree.drag.runTimers()
 	const remove = dropZones(tree)[1]
 	remove.props.onDrop(dragEvent())
 	assert.deepEqual(plain(tree.model.getSharedState().categories.map((category) => category.id)), ['cat_b'])
@@ -555,6 +604,7 @@ test('dropping a session on the delete zone archives it (the existing removal)',
 	const session = tree.rows('SessionRow').find((node) => node.props.summary.id === 's1')
 	assert.ok(session !== undefined)
 	session.props.onDragStart(dragEvent())
+	tree.drag.runTimers()
 	const remove = dropZones(tree)[1]
 	remove.props.onDrop(dragEvent())
 	assert.deepEqual(archived, ['s1'])
@@ -570,6 +620,7 @@ test('holding a dragged row in the bottom band scrolls the list, dragend stops i
 	listElement(tree).props.ref.current = list
 
 	workspaceRow(tree, 'ws1').props.onWorkspaceDragStart(dragEvent())
+	tree.drag.runTimers()
 	assert.equal(tree.drag.frames.length, 0, 'no frames before the pointer reaches an edge')
 
 	// The pointer arrives 4px above the list's bottom edge.
@@ -601,6 +652,7 @@ test('holding a dragged row in the top band scrolls back up', () => {
 	listElement(tree).props.ref.current = list
 
 	workspaceRow(tree, 'ws2').props.onWorkspaceDragStart(dragEvent())
+	tree.drag.runTimers()
 	tree.drag.dispatch('dragover', { clientX: 100, clientY: 104 })
 	tree.drag.runFrames(3)
 	assert.ok(list.scrollTop < 300)
@@ -614,6 +666,7 @@ test('leaving the window parks the loop, and the next dragover restarts it', () 
 	listElement(tree).props.ref.current = list
 
 	workspaceRow(tree, 'ws1').props.onWorkspaceDragStart(dragEvent())
+	tree.drag.runTimers()
 	tree.drag.dispatch('dragover', { clientX: 100, clientY: 296 })
 	tree.drag.runFrames(2)
 	assert.ok(list.scrollTop > 0)
@@ -639,6 +692,7 @@ test('a pointer away from the list does not scroll it', () => {
 	listElement(tree).props.ref.current = list
 
 	workspaceRow(tree, 'ws1').props.onWorkspaceDragStart(dragEvent())
+	tree.drag.runTimers()
 	// Horizontally outside the sidebar: the drag is over the main view.
 	tree.drag.dispatch('dragover', { clientX: 900, clientY: 200 })
 	tree.drag.runFrames(2)

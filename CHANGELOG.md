@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.8.3 — 2026-11-12
+
+### Fixed
+
+- **Drag cancelling immediately on Windows**: Chrome aborts a native drag whose
+  `dragstart` handler mutates the DOM — `dragend` fires a few pixels later and
+  no `drop` ever follows, so workspace and session rows could not be dragged at
+  all (categories only sometimes). `dragstart` now records the drag payload and
+  schedules the fold / drop bar on the next task (`armDrag` + `setTimeout(0)`),
+  cancelled by token when the drag ends first.
+- **Drops released right after entering a row**: rows and drop-bar zones now
+  also cancel `dragenter`, so a fast release still lands even when no
+  `dragover` reached the freshly entered target.
+- `test/drag.test.js`: fake timers, plus regression tests pinning that
+  `dragstart` itself leaves the tree untouched and that an early `dragend`
+  discards a stale arming; 86 tests pass on Node 20 and 24.
+
 ## 0.8.2 — 2026-11-11
 
 ### Added

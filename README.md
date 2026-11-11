@@ -39,7 +39,7 @@
 
 ```bash
 dsh plugin --profile <profile> add \
-  https://github.com/MineMahiro/dsh-mahiros-workspace-categories/releases/download/v0.8.2/dsh-mahiros-workspace-categories-0.8.2.tgz
+  https://github.com/MineMahiro/dsh-mahiros-workspace-categories/releases/download/v0.8.3/dsh-mahiros-workspace-categories-0.8.3.tgz
 ```
 
 **方式二：克隆仓库后本地安装**

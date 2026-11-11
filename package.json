@@ -1,6 +1,6 @@
 {
   "name": "dsh-mahiros-workspace-categories",
-  "version": "0.8.2",
+  "version": "0.8.3",
   "description": "分类树形式的工作区管理器（分类 > 工作区 > 会话），接管 DeepSeek Harness 左侧栏的工作区浏览器；分类与归类由 Host 共享，桌面浏览器与 dsh-pocket 手机端看到同一棵树。Category tree for the DSH sidebar workspace browser.",
   "type": "module",
   "main": "lib/index.js",
