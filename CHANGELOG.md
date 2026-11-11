@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.8.2 — 2026-11-11
+
+### Added
+
+- **Drag drop bar**: while any row is dragged, a bar at the top of the tree
+  offers two drop exits. Dropping on 取消 ends the drag with no change at all
+  (the previous order stays exactly as it was); dropping on 删除 runs the row's
+  existing destructive action — `deleteCategory` / `deleteWorkspace` with their
+  confirmation, and `archiveSession` for sessions (DSH has no delete-session
+  API; the existing undo strip covers it). Both zones reuse the row handlers
+  rather than re-implementing the operations, and the bar is only rendered
+  while a drag is live, so hovering it never triggers edge autoscroll.
+- `test/drag.test.js`: four more cases for the bar (visibility, cancel keeping
+  the order, delete for each row kind); 84 tests pass on Node 20 and 24.
+
 ## 0.8.1 — 2026-11-11
 
 ### Added

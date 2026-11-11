@@ -236,6 +236,8 @@ const SESSIONS = ['s1', 's2', 's3', 's4'].map(sessionFixture)
 function mountTree(options = {}) {
 	const storage = options.storage ?? memoryStorage()
 	const drag = dragWindow()
+	// Any confirmation the row action asks for is accepted by default.
+	drag.window.confirm = options.confirm ?? (() => true)
 	const renderer = createRenderer()
 	const { model } = loadBundle({ storage, window: drag.window, react: renderer.react })
 	model.mutateShared([
@@ -264,12 +266,12 @@ function mountTree(options = {}) {
 		openSession: () => {},
 		startSession: () => {},
 		createWorkspace: () => Promise.resolve(null),
-		archiveSession: () => {},
+		archiveSession: options.archiveSession ?? (() => {}),
 		unarchiveSession: () => {},
-		deleteWorkspace: () => Promise.resolve(),
+		deleteWorkspace: options.deleteWorkspace ?? (() => Promise.resolve()),
 		renameWorkspace: () => Promise.resolve(),
 		renameSession: () => Promise.resolve({ title: '' }),
-		insertWorkspaceBefore: () => Promise.resolve(),
+		insertWorkspaceBefore: options.insertWorkspaceBefore ?? (() => Promise.resolve()),
 		wide: true,
 		expandSidebar: () => {}
 	}
@@ -347,6 +349,27 @@ function fakeList(overrides = {}) {
 		},
 		overrides
 	)
+}
+
+/** The drag drop bar, present only while a row is dragged. */
+function dragBar(tree) {
+	return collect(tree.renderer.view, 'div').find((node) => node.props.className === 'twt-drag-bar')
+}
+
+/** The two zones of the drag bar, cancel first. */
+function dropZones(tree) {
+	return collect(tree.renderer.view, 'div').filter((node) =>
+		String(node.props.className ?? '').includes('twt-drop-zone')
+	)
+}
+
+/** Cross-realm objects from the VM need normalizing before deepEqual. */
+function plain(value) {
+	return value === undefined ? undefined : JSON.parse(JSON.stringify(value))
+}
+
+function tick() {
+	return new Promise((resolve) => setImmediate(resolve))
 }
 
 /* ------------------------------------------------------------------ *
@@ -451,6 +474,90 @@ test('dragging a session leaves the tree as it is', () => {
 
 	session.props.onDragEnd()
 	assert.equal(tree.count('SessionRow'), 4)
+})
+
+/* ------------------------------------------------------------------ *
+ * Top drop bar: cancel and delete
+ * ------------------------------------------------------------------ */
+
+test('the drag bar appears only while dragging, and its cancel zone keeps the order', () => {
+	const inserted = []
+	const deleted = []
+	const tree = mountTree({
+		insertWorkspaceBefore: (id, anchor) => {
+			inserted.push([id, anchor])
+			return Promise.resolve()
+		},
+		deleteWorkspace: (id) => {
+			deleted.push(id)
+			return Promise.resolve()
+		}
+	})
+	assert.equal(dragBar(tree), undefined, 'no bar at rest')
+
+	workspaceRow(tree, 'ws1').props.onWorkspaceDragStart(dragEvent())
+	assert.ok(dragBar(tree) !== undefined, 'missing the drag bar')
+	const zones = dropZones(tree)
+	assert.equal(zones.length, 2)
+	assert.equal(zones[0].props.children, '取消')
+	assert.equal(zones[1].props.children, '删除')
+
+	// Hovering a zone marks it hot, and dropping there cancels without changes.
+	zones[0].props.onDragOver(dragEvent())
+	assert.ok(dropZones(tree)[0].props.className.split(' ').includes('twt-drop-zone-hot'))
+	zones[0].props.onDrop(dragEvent())
+
+	assert.equal(dragBar(tree), undefined, 'the bar leaves with the drag')
+	assert.deepEqual(inserted, [])
+	assert.deepEqual(deleted, [])
+	assert.deepEqual(plain(tree.model.getSharedState().categories.map((category) => category.id)), ['cat_a', 'cat_b'])
+	assert.deepEqual(plain(tree.model.getViewState().assign), { ws1: 'cat_a', ws2: 'cat_b' })
+	assert.equal(tree.count('SessionRow'), 4)
+})
+
+test('dropping a workspace on the delete zone runs the existing workspace delete', async () => {
+	const deleted = []
+	const tree = mountTree({
+		deleteWorkspace: (id) => {
+			deleted.push(id)
+			return Promise.resolve()
+		}
+	})
+	workspaceRow(tree, 'ws1').props.onWorkspaceDragStart(dragEvent())
+	const remove = dropZones(tree)[1]
+	remove.props.onDragOver(dragEvent())
+	remove.props.onDrop(dragEvent())
+	// The delete runs through the row action's own promise chain.
+	await tick()
+	assert.deepEqual(deleted, ['ws1'])
+	// The row action also drops this device's assignment and expansion state.
+	assert.equal(tree.model.getViewState().assign.ws1, undefined)
+	assert.equal(tree.model.getViewState().expanded.ws1, undefined)
+})
+
+test('dropping a category on the delete zone deletes it', () => {
+	const tree = mountTree()
+	categoryRow(tree, 'cat_a').props.onDragStart(dragEvent())
+	const remove = dropZones(tree)[1]
+	remove.props.onDrop(dragEvent())
+	assert.deepEqual(plain(tree.model.getSharedState().categories.map((category) => category.id)), ['cat_b'])
+	assert.equal(tree.model.getViewState().assign.ws1, undefined)
+})
+
+test('dropping a session on the delete zone archives it (the existing removal)', () => {
+	const archived = []
+	const tree = mountTree({
+		archiveSession: (id) => {
+			archived.push(id)
+			return Promise.resolve()
+		}
+	})
+	const session = tree.rows('SessionRow').find((node) => node.props.summary.id === 's1')
+	assert.ok(session !== undefined)
+	session.props.onDragStart(dragEvent())
+	const remove = dropZones(tree)[1]
+	remove.props.onDrop(dragEvent())
+	assert.deepEqual(archived, ['s1'])
 })
 
 /* ------------------------------------------------------------------ *

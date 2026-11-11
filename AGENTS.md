@@ -62,6 +62,11 @@
 11. **贴边滚动只滚动 `.twt-scroll`**：`autoScrollStep` 是纯函数（边缘带 36px、每帧最多 16px、
    指针在列表水平范围外不动），帧循环用 `requestAnimationFrame` 且必须在 drop/dragend/
    移出窗口/到头时停掉；不要退回整页滚动或改变行高。
+12. **拖拽投放区必须复用行内动作**：树顶「取消 / 删除」只在 `dragState` 非空时渲染；
+   「取消」只 `endDrag`（不产生任何 op），「删除」调用 `deleteCategory` /
+   `deleteWorkspace` / `archiveSession`（确认与撤销沿用原流程，不另写删除实现）。
+   投放区是 `drop` 目标而非按钮，指针悬停时不得触发贴边滚动（autoscroll 里按 `dropBarRef`
+   的 `contains` 判断）。
 
 ## 兼容性规则
 
