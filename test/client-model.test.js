@@ -10,91 +10,11 @@
  */
 
 import assert from 'node:assert/strict'
-import { readFile } from 'node:fs/promises'
-import { fileURLToPath } from 'node:url'
-import { dirname, join } from 'node:path'
 import { test } from 'node:test'
-import vm from 'node:vm'
 
 import { applyOps as hostApplyOps, sanitizeShared as hostSanitizeShared } from '../lib/state-store.js'
+import { loadBundle, memoryStorage } from '../test-harness/bundle.js'
 
-const here = dirname(fileURLToPath(import.meta.url))
-const source = await readFile(join(here, '..', 'lib', 'client.js'), 'utf8')
-
-/**
- * Minimal React stand-in: enough to evaluate the real tree component headlessly.
- * Hooks run synchronously against the module state the component reads (the
- * outer harness only ever renders one snapshot), so element trees can be walked
- * to assert which rows show a status mark.
- */
-const fakeReact = {
-	createElement(type, props, ...children) {
-		const normalized = Object.assign({}, props)
-		normalized.children = children.length === 1 ? children[0] : children
-		return { type, props: normalized }
-	},
-	useSyncExternalStore: (subscribe, getSnapshot) => getSnapshot(),
-	useCallback: (fn) => fn,
-	useMemo: (fn) => fn(),
-	useState: (initial) => [typeof initial === 'function' ? initial() : initial, () => {}],
-	useRef: (initial) => ({ current: initial }),
-	useEffect: () => undefined
-}
-
-function memoryStorage(entries) {
-	const map = new Map(Object.entries(entries ?? {}))
-	return {
-		getItem: (key) => (map.has(key) ? map.get(key) : null),
-		setItem: (key, value) => map.set(key, String(value)),
-		removeItem: (key) => map.delete(key),
-		has: (key) => map.has(key),
-		entries: () => Object.fromEntries(map)
-	}
-}
-
-/** Evaluate one fresh copy of the bundle, as a page load would. */
-function loadBundle(options = {}) {
-	const storage = options.storage ?? memoryStorage()
-	const warnings = []
-	let captured
-	const sandbox = Object.assign({
-		console: {
-			log: () => {},
-			error: () => {},
-			warn: (...args) => warnings.push(args)
-		},
-		window: {
-			localStorage: storage,
-			location: { protocol: 'http:', href: 'http://harness.invalid/' },
-			fetch: options.fetch,
-			// Keep the engine testable: no real timers, and the polling loop is
-			// driven explicitly by the test through the exposed model surface.
-			setTimeout: () => 0,
-			clearTimeout: () => {},
-			setInterval: () => 0,
-			clearInterval: () => {},
-			addEventListener: () => {},
-			removeEventListener: () => {}
-		},
-		document: {
-			visibilityState: 'visible',
-			getElementById: () => null,
-			createElement: () => ({ style: {}, textContent: '' }),
-			head: { appendChild: () => {} },
-			addEventListener: () => {},
-			removeEventListener: () => {}
-		}
-	}, options.globals ?? {})
-	sandbox.window.__ModuleLoader__ = { load: (spec) => (captured = spec) }
-	vm.createContext(sandbox)
-	vm.runInContext(source, sandbox, { filename: 'client.js' })
-	const exports = captured.factory((name) => {
-		if (name === 'react') return fakeReact
-		if (name === '@deepseek-ai/dsh-client-ui-primitives') return { Tooltip: undefined }
-		throw new Error(`unexpected require: ${name}`)
-	})
-	return { exports, model: exports.__syncModel, storage, warnings, sandbox }
-}
 
 /** Cross-realm objects from the VM need normalizing before deepEqual. */
 function plain(value) {

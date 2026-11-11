@@ -23,6 +23,7 @@
 | 空会话清理 | 没有消息、也没有输入框草稿的空白会话自动从树中隐藏（当前打开的、有草稿的、刚创建的、运行中或已改名的除外），只隐藏不删日志 |
 | 原地编辑 | 分类、工作区、会话都能原地重命名；工作区可移出列表（磁盘目录和会话记录保留） |
 | 会话归档 | 行尾归档按钮 + 「隐藏归档 / 含归档 / 仅归档」三态筛选，和官方浏览器语义一致 |
+| 拖拽辅助 | 拖动类别时自动收起所有工作区，拖动工作区时自动收起所有会话，松手立即恢复原来的展开状态；拖到列表上下边缘时列表自动滚动 |
 | 新建工作区 | 选中目录后自动归入发起的分类、新建第一个会话并打开；流程进行中按钮只禁用、不转圈 |
 
 不改官方插件：本插件以 `priority: -100` 注册进 `sidebar.workspaces` 单槽位，
@@ -37,7 +38,7 @@
 
 ```bash
 dsh plugin --profile <profile> add \
-  https://github.com/MineMahiro/dsh-mahiros-workspace-categories/releases/download/v0.8.0/dsh-mahiros-workspace-categories-0.8.0.tgz
+  https://github.com/MineMahiro/dsh-mahiros-workspace-categories/releases/download/v0.8.1/dsh-mahiros-workspace-categories-0.8.1.tgz
 ```
 
 **方式二：克隆仓库后本地安装**

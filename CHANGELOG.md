@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.8.1 — 2026-11-11
+
+### Added
+
+- **Drag assist — automatic folding**: while a row is dragged the tree folds
+  everything below its level, so only peers are on screen — a category drag
+  folds every workspace away, a workspace drag folds every session away, and a
+  session drag (the deepest level) folds nothing. The fold is derived from the
+  live drag object and never written to the saved state, so drop, cancel and a
+  lost `dragend` all restore the previous open/closed layout.
+- **Drag assist — edge autoscroll**: holding a dragged row in the top or bottom
+  band of the list scrolls it, with the speed ramping towards the edge, so rows
+  outside the viewport stay reachable. The frame loop stops on drop/cancel, when
+  the pointer leaves the list or the window, and once the list cannot move.
+
+### Changed
+
+- `test-harness/bundle.js`: the VM/React harness shared by the client tests,
+  plus `test/drag.test.js` (drag folds, fold restoration, edge autoscroll) with
+  a stateful React stand-in so the real row handlers are exercised.
+
 ## 0.8.0 — 2026-11-11
 
 First public release of the fork, as **`dsh-mahiros-workspace-categories`**.

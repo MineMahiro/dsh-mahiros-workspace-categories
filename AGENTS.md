@@ -22,7 +22,8 @@
 | `lib/state-routes.js` | 精确 Fetch 路由 `GET\|POST /api/workspace-categories.state` 的契约 |
 | `lib/client.js` | 浏览器半：全部树 UI + 同步引擎（约 3.2k 行，含 CSS 字符串） |
 | `locale/*.json` | 插件市场展示的标题/描述 |
-| `test/*.test.js` | 无依赖单测（`node --test`），含发布守卫 |
+| `test/*.test.js` | 无依赖单测（`node --test`），含发布守卫与拖拽行为 |
+| `test-harness/bundle.js` | 客户端单测共用的 VM + React 替身加载器（不在 `test/` 下，避免被 `node --test` 当作用例文件） |
 | `icon.svg` | 插件图标 |
 
 ## 不可破坏的约定（测试会钉住）
@@ -54,6 +55,13 @@
    `uiWorkspace.pickDirectory()`。任何情况下都不自绘目录对话框。
 9. **空会话清理只能是视图过滤**：DSH 没有删除会话的 API，不得自动归档/删除任何会话日志；
    保留条件（主视图打开、有草稿、<2 分钟、运行中、已改名）由 `isEmptySession` 单测钉住。
+10. **拖拽折叠只能是视图叠加**：拖动期间的自动收起由 `dragFoldOf(dragState)` 推导
+   （category → 收起全部类别，workspace → 收起全部工作区，session → 不收起），
+   **不得写入 `localState.collapsed/expanded` 或持久化**，否则松手后恢复不了拖动前的状态；
+   拖拽结束必须回到拖动前的展开布局（`test/drag.test.js` 钉住）。
+11. **贴边滚动只滚动 `.twt-scroll`**：`autoScrollStep` 是纯函数（边缘带 36px、每帧最多 16px、
+   指针在列表水平范围外不动），帧循环用 `requestAnimationFrame` 且必须在 drop/dragend/
+   移出窗口/到头时停掉；不要退回整页滚动或改变行高。
 
 ## 兼容性规则
 
@@ -83,7 +91,9 @@ npm pack --dry-run        # 发布内容必须含 lib/ locale/ cordis.patch.yml 
   `dsh.profile.bundles`，刷新页面即可；**Host 半改动需要重启 Host**。
 - 不要在 DSH 自己托管的 agent 会话里重启该 Host（会杀掉会话）——重启交给用户。
 - 客户端单测在 VM 里加载真实 `lib/client.js`（假 React），新增模型逻辑请导出到
-  `exports.__syncModel` 并写测试；Host 侧逻辑直接 import。
+  `exports.__syncModel` 并写测试；Host 侧逻辑直接 import。需要真实交互（状态更新后重渲染、
+  effect、拖拽事件）的用例用 `test-harness/bundle.js` 注入带状态的 React 替身，
+  `test/drag.test.js` 是范例。
 
 ## 发布清单
 
