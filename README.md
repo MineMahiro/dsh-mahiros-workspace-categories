@@ -78,7 +78,7 @@ dsh plugin --profile <profile> add ./dsh-mahiros-workspace-categories
 ## 开发
 
 ```bash
-npm test        # node --test "test/*.test.js"，无需安装依赖
+npm test        # = node --test，自动发现 test/*.test.js，无需安装依赖
 ```
 
 仓库结构、数据契约、发布流程和 agent 约定见 [`AGENTS.md`](./AGENTS.md)；

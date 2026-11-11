@@ -75,7 +75,7 @@
 
 ```bash
 node --version            # >= 20
-npm test                  # node --test "test/*.test.js"，无需 install
+npm test                  # 即 node --test（无参数自动发现 test/*.test.js），无需 install
 npm pack --dry-run        # 发布内容必须含 lib/ locale/ cordis.patch.yml icon.svg README LICENSE NOTICE
 ```
 
